@@ -1,0 +1,60 @@
+version: '3'
+
+services:
+
+    zipkin:
+        image: openzipkin/zipkin:2.23
+        container_name: zipkin
+        environment: 
+            - STORAGE_TYPE=mem
+            # - ES_HOSTS=http://elasticsearch:9200
+            # - ES_INDEX=test
+            - ZIPKIN_UI_LOGS_URL=http://localhost:5601/app/kibana#/discover?_a=(index:'filebeat-*',query:(language:lucene,query:'{traceId}'))
+        ports:
+            - 9411:9411
+
+    elasticsearch:
+        image: docker.elastic.co/elasticsearch/elasticsearch-oss:7.10.2
+        container_name: elasticsearch
+        environment:
+            - node.name=es01
+            - cluster.name=docker-cluster
+            - discovery.type=single-node
+            - bootstrap.memory_lock=true
+            - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+            nofile:
+                soft: 65536 # maximum number of open files for the Elasticsearch user, set to at least 65536 on modern systems
+                hard: 65536
+        ports:
+            - 9200:9200
+            - 9300:9300
+
+    kibana:
+        image: docker.elastic.co/kibana/kibana-oss:7.10.2
+        # build: kibana                         #OpenDistro for ElasticSearch Kibana
+        container_name: kibana
+        environment:
+            - ELASTICSEARCH_URL=http://elasticsearch:9200
+            - ELASTICSEARCH_HOSTS=["http://elasticsearch:9200"]
+        ports:
+            - 5601:5601
+
+    filebeat:
+        image: docker.elastic.co/beats/filebeat-oss:7.10.2
+        container_name: filebeat
+        user: root
+        volumes: 
+            - /var/lib/docker:/var/lib/docker:ro
+            - /var/run/docker.sock:/var/run/docker.sock
+            - ./filebeat.yml:/usr/share/filebeat/filebeat.yml
+        command: filebeat -e -strict.perms=false
+
+    heath:
+        image: vitshevl/health-service-with-logs:1.0.0
+        container_name: health-service
+        ports:
+            - 8080:8080    

@@ -1,0 +1,9 @@
+server:
+  port : 8080
+
+test-properties:
+  version: ${VERSION:1}
+
+spring:
+  zipkin:
+    baseUrl: http://zipkin:9411/
